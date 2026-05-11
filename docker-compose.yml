@@ -10,8 +10,6 @@ services:
     volumes:
       - badge-data:/app/data
       - badge-logs:/app/logs
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
       - PORT=3002
