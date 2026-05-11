@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badge Reader Emulator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #e5e5e5; font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: #171717; border: 1px solid #262626; border-radius: 16px; padding: 40px; width: 420px; }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color: #737373; font-size: 14px; margin-bottom: 32px; }
+    label { display: block; font-size: 13px; color: #a3a3a3; margin-bottom: 6px; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; color: #fff; font-size: 18px; font-family: 'SF Mono', 'Cascadia Code', monospace; letter-spacing: 2px; outline: none; }
+    input:focus { border-color: #22d3ee; }
+    button { background: #0891b2; color: #fff; border: none; border-radius: 8px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+    button:hover { background: #06b6d4; }
+    button:active { background: #0e7490; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .target { margin-bottom: 20px; }
+    .target input { font-size: 14px; font-family: system-ui; letter-spacing: normal; }
+    .log { margin-top: 24px; border-top: 1px solid #262626; padding-top: 16px; }
+    .log h3 { font-size: 13px; color: #737373; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .log-entry { font-size: 13px; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-family: monospace; }
+    .log-entry.success { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+    .log-entry.error { background: #2a0a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .log-entry.sending { background: #1a1a2e; color: #818cf8; border: 1px solid #312e81; }
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .presets button { background: #262626; font-size: 12px; padding: 6px 12px; border-radius: 6px; }
+    .presets button:hover { background: #333; }
+    .speed { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 13px; color: #a3a3a3; }
+    .speed input[type=range] { flex: 1; accent-color: #22d3ee; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔖 Badge Reader Emulator</h1>
+    <p class="subtitle">Simulates the pcProx USB reader by sending card digits as rapid keystrokes to the scanner app</p>
+
+    <div class="target">
+      <label>Scanner App URL</label>
+      <input type="text" id="targetUrl" value="/api/scan" />
+    </div>
+
+    <label>Card Number</label>
+    <div class="input-row">
+      <input type="text" id="cardInput" placeholder="02681234" autofocus
+        onkeydown="if(event.key==='Enter'){document.getElementById('scanBtn').click()}" />
+      <button id="scanBtn" onclick="emitScan()">Scan</button>
+    </div>
+
+    <div class="speed">
+      <span>Keystroke delay:</span>
+      <input type="range" id="delay" min="5" max="200" value="30" />
+      <span id="delayVal">30ms</span>
+    </div>
+
+    <div class="presets">
+      <label style="width:100%; margin-bottom: 4px;">Sample cards:</label>
+      <button onclick="setCard('02681234')">02681234</button>
+      <button onclick="setCard('02685678')">02685678</button>
+      <button onclick="setCard('02689999')">02689999</button>
+      <button onclick="setCard('99999999')">Unknown</button>
+    </div>
+
+    <div class="log">
+      <h3>Scan Log</h3>
+      <div id="logEntries"></div>
+    </div>
+  </div>
+
+  <script>
+    const delaySlider = document.getElementById('delay');
+    const delayVal = document.getElementById('delayVal');
+    delaySlider.oninput = () => { delayVal.textContent = delaySlider.value + 'ms'; };
+
+    function setCard(num) {
+      document.getElementById('cardInput').value = num;
+      document.getElementById('cardInput').focus();
+    }
+
+    function addLog(msg, type) {
+      const div = document.createElement('div');
+      div.className = 'log-entry ' + type;
+      const time = new Date().toLocaleTimeString();
+      div.textContent = `[${time}] ${msg}`;
+      const container = document.getElementById('logEntries');
+      container.insertBefore(div, container.firstChild);
+      if (container.children.length > 20) container.lastChild.remove();
+    }
+
+    async function emitScan() {
+      const cardNumber = document.getElementById('cardInput').value.replace(/\D/g, '');
+      const targetUrl = document.getElementById('targetUrl').value.trim();
+
+      if (!cardNumber || cardNumber.length < 4) {
+        addLog('Card number must be at least 4 digits', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('scanBtn');
+      btn.disabled = true;
+      addLog(`Scanning card ${cardNumber}...`, 'sending');
+
+      try {
+        const res = await fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cardNumber }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          const emp = data.employee;
+          const photo = emp.photo ? '📷' : '👤';
+          addLog(`${photo} ${emp.displayName} — ${emp.jobTitle || 'No title'} (${data.timing.totalMs}ms, cache: ${data.timing.cacheHit})`, 'success');
+        } else {
+          addLog(`${data.error || 'Unknown error'} (HTTP ${res.status})`, 'error');
+        }
+      } catch (err) {
+        addLog(`Connection failed: ${err.message}`, 'error');
+      }
+
+      btn.disabled = false;
+      document.getElementById('cardInput').select();
+    }
+  </script>
+</body>
+</html>
