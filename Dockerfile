@@ -22,7 +22,6 @@ RUN apk add --no-cache --virtual .build-deps python3 make g++ \
 
 COPY --from=builder /app/dist ./dist
 COPY server ./server
-COPY public ./public
 
 ENV NODE_ENV=production
 ENV PORT=3002

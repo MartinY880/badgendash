@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   badge-scanner:
-    image: ghcr.io/martiny880/badgendash:latest
+    build: .
     container_name: badge-scanner
     restart: unless-stopped
     ports:
@@ -10,17 +10,11 @@ services:
     volumes:
       - badge-data:/app/data
       - badge-logs:/app/logs
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=3002
-      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
-      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
-      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
-      - PDK_CLIENT_ID=${PDK_CLIENT_ID}
-      - PDK_CLIENT_SECRET=${PDK_CLIENT_SECRET}
-      - PDK_SYSTEM_ID=${PDK_SYSTEM_ID}
-      - PDK_CLOUD_NODE_ID=${PDK_CLOUD_NODE_ID}
-      - PDK_DEVICE_ID=${PDK_DEVICE_ID}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/api/health"]
       interval: 30s
