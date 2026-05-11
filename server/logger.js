@@ -14,6 +14,12 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'badge-scanner' },
   transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    }),
     new winston.transports.File({
       filename: path.join(logsDir, 'error.log'),
       level: 'error',
@@ -28,15 +34,6 @@ const logger = winston.createLogger({
   ],
 });
 
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    })
-  );
-}
+export default logger;
 
 export default logger;
