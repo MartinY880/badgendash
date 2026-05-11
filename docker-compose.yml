@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   badge-scanner:
-    build: .
+    image: ghcr.io/martiny880/badgendash:latest
     container_name: badge-scanner
     restart: unless-stopped
     ports:
